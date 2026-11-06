@@ -47,3 +47,7 @@ To adjust the national population record in future, edit `POPULATION_START` and 
 ### Connected project links
 
 The Digital Services hub links to GitHub repositories for Greenwick-associated public projects, which remain managed independently from this website. Production service availability and authentication are not asserted by those links.
+
+## Automatic publication
+
+The `.github/workflows/deploy-pages.yml` workflow deploys the static website to GitHub Pages on every push to `main`, provided the repository's GitHub Pages source is configured for **GitHub Actions**. If Pages is set to **Deploy from a branch**, GitHub's branch publisher can also serve the same root files; verify deployment under repository Settings → Pages.
