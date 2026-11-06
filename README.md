@@ -33,3 +33,17 @@ The original `Prime Ministers` and `Latest` pages contained little or no substan
 ## Assets
 
 All supplied Greenwick images are stored in `assets/img/`.
+
+## November 2026 Government Portal Upgrade
+
+The official site now includes a Government & Cabinet directory, Digital Services hub, National Statistics dashboard, revised latest updates, restored Commonwealth overview, economic summary and responsive styling with an optional dark theme. The existing information archive remains available.
+
+### National population tracker
+
+The national counter starts at **14,167** on **6 November 2026 at 12:32 pm Australia/Brisbane (UTC+10)** and increases by **3 every 2 hours**, calculated using a single absolute timestamp in `assets/site.js`. It is rendered on every page's top bar and on the homepage and statistics dashboard; it is consistent between browsers and survives reloads without a database.
+
+To adjust the national population record in future, edit `POPULATION_START` and `POPULATION_EPOCH` together in `assets/site.js`. The counter requires JavaScript and accurate device time.
+
+### Connected project links
+
+The Digital Services hub links to GitHub repositories for Greenwick-associated public projects, which remain managed independently from this website. Production service availability and authentication are not asserted by those links.
