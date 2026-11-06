@@ -1,0 +1,104 @@
+name: Audit Greenwick GitHub Pages sites
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/site-health-audit.yml'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployed sites and local assets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin, urlparse
+          from urllib.request import Request, urlopen
+          from urllib.error import URLError, HTTPError
+          import sys
+
+          sites = {
+            "Australia First Foundation (custom domain)": "https://ausfirstfoundation.org/",
+            "Greenwick Bank Terminal": "https://greenwickgov.github.io/gbterminal/",
+            "Noma Web": "https://greenwickgov.github.io/Noma-Web/",
+            "MicroCon 2027": "https://greenwickgov.github.io/microcon2027/",
+            "6FLIX": "https://greenwickgov.github.io/6flix/",
+            "Greenwick Parliament": "https://greenwickgov.github.io/greenwick-parliament/",
+            "Election Simulator": "https://greenwickgov.github.io/Election-sim/",
+            "ID Redeem": "https://greenwickgov.github.io/idredeem/",
+            "Greenwick Meteorological Bureau": "https://greenwickgov.github.io/Greenwick-Meteorological-Bureau/",
+            "6NEWS": "https://greenwickgov.github.io/6news/",
+            "PixelForge": "https://greenwickgov.github.io/PixelForge-Image-Generation/",
+            "PMAC": "https://greenwickgov.github.io/Permanent-Micro-Arbitration-Court/",
+            "MSC Games": "https://greenwickgov.github.io/msc-games/",
+            "Our Plan": "https://greenwickgov.github.io/our-plan/",
+            "Micronational Voices": "https://greenwickgov.github.io/Micronational-Voices/",
+          }
+
+          class Assets(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+              def handle_starttag(self, tag, items):
+                  attrs = dict(items)
+                  if tag == "script" and attrs.get("src"):
+                      self.urls.append(attrs["src"])
+                  if tag == "link" and attrs.get("rel") in ("stylesheet", "icon") and attrs.get("href"):
+                      self.urls.append(attrs["href"])
+                  if tag == "img" and attrs.get("src"):
+                      self.urls.append(attrs["src"])
+
+          def open_url(url, method="GET"):
+              req = Request(url, method=method, headers={"User-Agent": "GreenwickPagesAudit/1.0"})
+              return urlopen(req, timeout=18)
+
+          failures = []
+          lines = ["## Published site audit", "", "| Site | Result |", "| --- | --- |"]
+          for name, url in sites.items():
+              try:
+                  with open_url(url) as resp:
+                      html = resp.read(512000).decode("utf-8", errors="replace")
+                      if resp.status != 200:
+                          raise RuntimeError(f"HTTP {resp.status}")
+                  assets = Assets()
+                  assets.feed(html)
+                  seen = set()
+                  count = 0
+                  for raw in assets.urls:
+                      absolute = urljoin(url, raw)
+                      u = urlparse(absolute)
+                      if u.hostname != urlparse(url).hostname or not raw or raw.startswith("data:"):
+                          continue
+                      if absolute in seen:
+                          continue
+                      seen.add(absolute)
+                      try:
+                          with open_url(absolute, "HEAD") as asset:
+                              if asset.status != 200:
+                                  raise RuntimeError(f"asset HTTP {asset.status}")
+                      except Exception as err:
+                          raise RuntimeError(f"broken asset {absolute}: {err}")
+                      count += 1
+                      if count >= 8:
+                          break
+                  message = f"PASS (homepage + {count} assets)"
+                  print(f"PASS {name}: {url} ({count} assets)")
+              except Exception as err:
+                  message = f"FAIL ({str(err).replace('|', '/')[:100]})"
+                  failures.append((name, url, str(err)))
+                  print(f"FAIL {name}: {url} -- {err}")
+              lines.append(f"| {name} | {message} |")
+          lines.extend(["", "Watch Together requires its Node.js/Socket.IO hosting service; a GitHub Pages deployment alone is insufficient."])
+          with open("/tmp/site-audit.md", "w") as f:
+              f.write("\n".join(lines) + "\n")
+          import os
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(open("/tmp/site-audit.md").read())
+          if failures:
+              print(f"{len(failures)} site(s) failed the published URL / asset audit.")
+              sys.exit(1)
+          print("All 15 static website checks passed.")
+          PY
