@@ -103,3 +103,14 @@ const v=$('#viewer360');if(v){const img=v.querySelector('img');let down=false,sx
     });
   }
 })();
+
+/* Keep the current section visible throughout the public site. */
+(() => {
+  const section = document.querySelector('.section-navigation')?.getAttribute('aria-label')?.replace(/ sections$/, '');
+  const destinations = {'Parliament':'house-and-members.html','Government':'government.html','Law & elections':'legislation-tracker.html','Commonwealth':'about.html','The Crown':'monarchy.html','Services & citizens':'digital-services.html','International':'about.html'};
+  if (section && destinations[section]) {
+    document.querySelectorAll('.desktop-nav a').forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === destinations[section]);
+    });
+  }
+})();
