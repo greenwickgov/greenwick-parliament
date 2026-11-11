@@ -18,7 +18,7 @@ const v=$('#viewer360');if(v){const img=v.querySelector('img');let down=false,sx
   if (header) {
     const strip = document.createElement('div');
     strip.className = 'civic-topbar';
-    strip.innerHTML = '<div class="civic-topbar-inner"><a class="civic-topbar-identity" href="index.html"><span class="civic-emblem">✦</span> COMMONWEALTH OF GREENWICK <span class="topbar-divider">/</span> OFFICIAL GOVERNMENT PORTAL</a><div class="civic-topbar-actions"><a href="national-statistics.html" class="topbar-population"><i class="live-dot"></i> POPULATION <b data-population>14,167</b></a><a href="digital-services.html" class="topbar-services">PUBLIC SERVICES ↗</a></div></div>';
+    strip.innerHTML = '<div class="civic-topbar-inner"><a class="civic-topbar-identity" href="index.html"><span class="civic-emblem">✦</span> COMMONWEALTH OF GREENWICK <span class="topbar-divider">/</span> <span class="topbar-portal">OFFICIAL GOVERNMENT PORTAL</span></a><div class="civic-topbar-actions"><a href="national-statistics.html" class="topbar-population"><i class="live-dot"></i> POPULATION <b data-population>14,167</b></a><a href="digital-services.html" class="topbar-services">PUBLIC SERVICES →</a></div></div>';
     header.parentNode.insertBefore(strip, header);
     const nav = header.querySelector('.desktop-nav');
     if(nav && !nav.querySelector('a[href="government.html"]')) {
@@ -51,4 +51,55 @@ const v=$('#viewer360');if(v){const img=v.querySelector('img');let down=false,sx
   refreshPopulation();
   setInterval(refreshPopulation, 30000);
   document.addEventListener('visibilitychange', () => { if(!document.hidden) refreshPopulation(); });
+})();
+/* Accessible parliamentary navigation and dialogs. */
+(() => {
+  const brand = document.querySelector('.brand b');
+  if (brand) brand.textContent = 'Parliament of Greenwick';
+  const current = location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.desktop-nav a').forEach(link => {
+    const active = link.getAttribute('href') === current;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+  });
+  const drawer = document.querySelector('#drawer');
+  const menuButton = document.querySelector('#menuBtn');
+  const searchModal = document.querySelector('#searchModal');
+  const searchButton = document.querySelector('#searchBtn');
+  const searchInput = document.querySelector('#siteSearch');
+  if (searchInput) searchInput.setAttribute('aria-label', 'Search Parliament of Greenwick');
+  if (menuButton) {
+    menuButton.setAttribute('aria-controls', 'drawer');
+    menuButton.setAttribute('aria-expanded', 'false');
+    menuButton.title = 'All sections';
+  }
+  let previousFocus = null;
+  for (const [panel, trigger, name, focusSelector] of [
+    [drawer, menuButton, 'All sections', '#closeMenu'],
+    [searchModal, searchButton, 'Search Parliament', '#siteSearch']
+  ]) {
+    if (!panel) continue;
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', name);
+    panel.inert = !panel.classList.contains('open');
+    new MutationObserver(() => {
+      const open = panel.classList.contains('open');
+      panel.inert = !open;
+      if (panel === drawer) trigger?.setAttribute('aria-expanded', String(open));
+      if (open) {
+        previousFocus = document.activeElement;
+        panel.querySelector(focusSelector)?.focus();
+      } else if (previousFocus && !document.querySelector('.drawer.open, .search-modal.open')) {
+        previousFocus.focus();
+      }
+    }).observe(panel, {attributes:true, attributeFilter:['class']});
+    panel.addEventListener('keydown', event => {
+      if (event.key !== 'Tab') return;
+      const controls = [...panel.querySelectorAll('a[href],button,input,[tabindex="0"]')].filter(el => el.getClientRects().length);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {event.preventDefault();last?.focus();}
+      if (!event.shiftKey && document.activeElement === last) {event.preventDefault();first?.focus();}
+    });
+  }
 })();
